@@ -1,0 +1,148 @@
+@import "tailwindcss";
+@import "highlight.js/styles/github-dark.css";
+
+:root {
+  --bg: #f3efe6;
+  --bg-elevated: #faf7f1;
+  --bg-sidebar: #1c2420;
+  --bg-sidebar-hover: #26312b;
+  --ink: #1a211c;
+  --ink-muted: #5c6b62;
+  --accent: #0f7a5f;
+  --accent-soft: #d7eee6;
+  --accent-strong: #0a5c47;
+  --border: #d9d2c4;
+  --danger: #a33b2b;
+  --user-bubble: #e7f3ee;
+  --assistant-bubble: transparent;
+  --shadow: 0 12px 40px rgba(28, 36, 32, 0.08);
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #e4f2ec 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #efe6d4 0%, transparent 50%),
+    var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans), "DM Sans", sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), "Source Serif 4", serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), "JetBrains Mono", monospace;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c9c1b3;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.prose-chat {
+  line-height: 1.65;
+  font-size: 0.98rem;
+}
+.prose-chat p {
+  margin: 0.65em 0;
+}
+.prose-chat p:first-child {
+  margin-top: 0;
+}
+.prose-chat p:last-child {
+  margin-bottom: 0;
+}
+.prose-chat pre {
+  margin: 0.85em 0;
+  overflow-x: auto;
+  border-radius: 10px;
+  background: #161b19;
+  padding: 0.9rem 1rem;
+}
+.prose-chat code {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.86em;
+}
+.prose-chat :not(pre) > code {
+  background: #ebe4d7;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.prose-chat ul,
+.prose-chat ol {
+  padding-left: 1.25rem;
+  margin: 0.6em 0;
+}
+.prose-chat a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-chat blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 0.8em 0;
+  padding-left: 0.9em;
+  color: var(--ink-muted);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.35s ease-out both;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 1.2s ease-in-out infinite;
+}
+
+.typing-cursor::after {
+  content: "▍";
+  margin-left: 2px;
+  color: var(--accent);
+  animation: pulse-soft 1s infinite;
+}
