@@ -1,0 +1,810 @@
+{
+  "version": "2026-09-12",
+  "freeOnlyDefault": true,
+  "globalConcurrency": 1,
+  "sources": [
+    "https://github.com/mnfst/awesome-free-llm-apis",
+    "https://klymentiev.com/blog/free-llm-api",
+    "Provider documentation checked September 2026"
+  ],
+  "providers": [
+    {
+      "id": "aion-labs",
+      "name": "Aion Labs",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "unknown",
+      "free": true,
+      "baseUrl": "https://api.aionlabs.ai/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "AION_LABS_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "aion-labs/aion-rp-llama-3.1-8b",
+          "name": "Aion RP Llama 3.1 8B",
+          "contextWindow": 32000,
+          "maxOutput": 32000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "aion-labs/aion-3.0-mini",
+          "name": "Aion 3.0 Mini",
+          "contextWindow": 128000,
+          "maxOutput": 32000,
+          "capabilities": ["chat", "reasoning"]
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 15, "official": true },
+        "tpd": { "value": 20000, "official": true },
+        "concurrency": { "value": 1, "official": false, "safetyMultiplier": 0.5 }
+      },
+      "scheduler": {
+        "priority": 50,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Permanent free tier specialized for roleplay and storytelling.",
+      "sources": ["https://github.com/mnfst/awesome-free-llm-apis"]
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://api.cohere.com/v2",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "COHERE_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "command-r",
+          "name": "Command R",
+          "contextWindow": 128000,
+          "maxOutput": 4000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "command-r-plus",
+          "name": "Command R+",
+          "contextWindow": 128000,
+          "maxOutput": 4000,
+          "capabilities": ["chat"]
+        },
+        {
+          "id": "command-a",
+          "name": "Command A",
+          "contextWindow": 256000,
+          "maxOutput": 8000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 20, "official": true },
+        "rpm_chat": { "value": 20, "official": true },
+        "monthly": { "value": 1000, "official": true, "unit": "requests" }
+      },
+      "scheduler": {
+        "priority": 55,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Trial key: 1,000 calls/month. Non-commercial use only.",
+      "sources": ["https://docs.cohere.com"]
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://api.mistral.ai/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "MISTRAL_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "mistral-small-latest",
+          "name": "Mistral Small",
+          "contextWindow": 256000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "ministral-8b-latest",
+          "name": "Ministral 8B",
+          "contextWindow": 256000,
+          "capabilities": ["chat"]
+        },
+        {
+          "id": "codestral-latest",
+          "name": "Codestral",
+          "contextWindow": 128000,
+          "capabilities": ["chat", "code"]
+        }
+      ],
+      "limits": {
+        "rps": { "value": 1, "official": false, "safetyMultiplier": 0.5 },
+        "tpm": { "value": 500000, "official": false, "safetyMultiplier": 0.5 },
+        "notes": "Mistral no longer publishes numeric free-tier limits; values from last published estimates."
+      },
+      "scheduler": {
+        "priority": 60,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Free mode includes ~$10/month credits. Free-mode data may be used for training unless opted out.",
+      "sources": ["https://docs.mistral.ai"]
+    },
+    {
+      "id": "z-ai",
+      "name": "Z AI",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "unknown",
+      "free": true,
+      "baseUrl": "https://api.z.ai/api/paas/v4",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "ZAI_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "glm-4.7-flash",
+          "name": "GLM-4.7-Flash",
+          "contextWindow": 200000,
+          "maxOutput": 128000,
+          "capabilities": ["chat", "reasoning"],
+          "preferred": true
+        },
+        {
+          "id": "glm-4.5-flash",
+          "name": "GLM-4.5-Flash",
+          "contextWindow": 128000,
+          "maxOutput": 96000,
+          "capabilities": ["chat", "reasoning"]
+        }
+      ],
+      "limits": {
+        "concurrency": { "value": 1, "official": true }
+      },
+      "scheduler": {
+        "priority": 45,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Permanent free models. International endpoint api.z.ai.",
+      "sources": ["https://docs.z.ai"]
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare Workers AI",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai",
+      "apiStyle": "cloudflare_native",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "CLOUDFLARE_API_TOKEN",
+        "required": true,
+        "extraEnvVars": ["CLOUDFLARE_ACCOUNT_ID"]
+      },
+      "routes": {
+        "chat": "/v1/chat/completions",
+        "models": "/models",
+        "health": "/models",
+        "run": "/run/{model}"
+      },
+      "models": [
+        {
+          "id": "@cf/meta/llama-3.1-8b-instruct",
+          "name": "Llama 3.1 8B",
+          "contextWindow": 8000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "name": "Llama 3.3 70B",
+          "contextWindow": 24000,
+          "capabilities": ["chat"]
+        },
+        {
+          "id": "@cf/openai/gpt-oss-120b",
+          "name": "GPT-OSS 120B",
+          "contextWindow": 128000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 300, "official": true },
+        "neuronsPerDay": { "value": 10000, "official": true }
+      },
+      "scheduler": {
+        "priority": 70,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "10,000 Neurons/day shared across models. Resets 00:00 UTC.",
+      "sources": ["https://developers.cloudflare.com/workers-ai/"]
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "GROQ_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "openai/gpt-oss-20b",
+          "name": "GPT-OSS 20B",
+          "contextWindow": 131000,
+          "maxOutput": 65000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "openai/gpt-oss-120b",
+          "name": "GPT-OSS 120B",
+          "contextWindow": 131000,
+          "maxOutput": 65000,
+          "capabilities": ["chat"]
+        },
+        {
+          "id": "qwen/qwen3-32b",
+          "name": "Qwen3 32B",
+          "contextWindow": 131000,
+          "maxOutput": 16000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 30, "official": true },
+        "rpd": { "value": 1000, "official": true },
+        "tpm": { "value": 8000, "official": true },
+        "tpd": { "value": 200000, "official": true }
+      },
+      "scheduler": {
+        "priority": 90,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Ultra-fast LPU inference. Llama removed from free plan Aug 2026.",
+      "sources": ["https://console.groq.com/docs/rate-limits"]
+    },
+    {
+      "id": "kilo",
+      "name": "Kilo",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "unknown",
+      "free": true,
+      "baseUrl": "https://api.kilo.ai/api/gateway",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "KILO_API_KEY",
+        "required": false
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "kilo-auto/free",
+          "name": "Kilo Auto Free",
+          "contextWindow": 262000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+          "name": "Nemotron 3 Nano Reasoning Free",
+          "contextWindow": 256000,
+          "maxOutput": 65000,
+          "capabilities": ["chat", "reasoning"]
+        },
+        {
+          "id": "liquid/lfm-2.5-2.6b:free",
+          "name": "LFM 2.5 2.6B Free",
+          "contextWindow": 64000,
+          "maxOutput": 8000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rph": { "value": 200, "official": true }
+      },
+      "scheduler": {
+        "priority": 65,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "No API key required for free pool. 200 req/hour per IP.",
+      "sources": ["https://github.com/mnfst/awesome-free-llm-apis"]
+    },
+    {
+      "id": "llm7",
+      "name": "LLM7",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://api.llm7.io/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "LLM7_API_KEY",
+        "required": false
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "gpt-oss:20b",
+          "name": "GPT-OSS 20B",
+          "contextWindow": 128000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "mistral-nemo-instruct-2407",
+          "name": "Mistral Nemo Instruct",
+          "contextWindow": 128000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 10, "official": true },
+        "rph": { "value": 60, "official": true },
+        "tpd": { "value": 500000, "official": true }
+      },
+      "scheduler": {
+        "priority": 75,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Anonymous access works without a key. Free token raises limits.",
+      "sources": ["https://llm7.io"]
+    },
+    {
+      "id": "modelscope",
+      "name": "ModelScope",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "unknown",
+      "free": true,
+      "baseUrl": "https://api-inference.modelscope.cn/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "MODELSCOPE_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "Qwen/Qwen2.5-7B-Instruct",
+          "name": "Qwen2.5 7B Instruct",
+          "contextWindow": 128000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "Qwen/Qwen2.5-14B-Instruct",
+          "name": "Qwen2.5 14B Instruct",
+          "contextWindow": 128000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rpd": { "value": 2000, "official": true },
+        "rpdPerModel": { "value": 500, "official": true }
+      },
+      "scheduler": {
+        "priority": 40,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Requires Alibaba Cloud account binding and real-name verification.",
+      "sources": ["https://modelscope.cn"]
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA NIM",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://integrate.api.nvidia.com/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "NVIDIA_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "meta/llama-3.3-70b-instruct",
+          "name": "Llama 3.3 70B Instruct",
+          "contextWindow": 128000,
+          "maxOutput": 4000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "openai/gpt-oss-20b",
+          "name": "GPT-OSS 20B",
+          "contextWindow": 131000,
+          "maxOutput": 131000,
+          "capabilities": ["chat"]
+        },
+        {
+          "id": "google/gemma-2-27b-it",
+          "name": "Gemma 2 27B",
+          "contextWindow": 8000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 40, "official": true },
+        "rpd": { "value": 10000, "official": true }
+      },
+      "scheduler": {
+        "priority": 80,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Free endpoints for prototyping via NVIDIA Developer Program.",
+      "sources": ["https://build.nvidia.com"]
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "OPENROUTER_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "openrouter/free",
+          "name": "OpenRouter Free Router",
+          "contextWindow": 131000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "openai/gpt-oss-20b:free",
+          "name": "GPT-OSS 20B Free",
+          "contextWindow": 131000,
+          "maxOutput": 32000,
+          "capabilities": ["chat"]
+        },
+        {
+          "id": "google/gemma-3-27b-it:free",
+          "name": "Gemma 3 27B Free",
+          "contextWindow": 131000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 20, "official": true },
+        "rpd": { "value": 50, "official": true }
+      },
+      "scheduler": {
+        "priority": 85,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.1
+      },
+      "notes": "50 RPD free models; 1,000 RPD after $10 lifetime credits. Upstream 429s common.",
+      "sources": ["https://openrouter.ai/docs/api-reference/limits"]
+    },
+    {
+      "id": "ovhcloud",
+      "name": "OVHcloud AI Endpoints",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "OVHCLOUD_API_KEY",
+        "required": false
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "Mistral-Nemo-Instruct-2407",
+          "name": "Mistral Nemo Instruct",
+          "contextWindow": 128000,
+          "maxOutput": 4000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "Meta-Llama-3_3-70B-Instruct",
+          "name": "Llama 3.3 70B Instruct",
+          "contextWindow": 131000,
+          "maxOutput": 4000,
+          "capabilities": ["chat"]
+        },
+        {
+          "id": "gpt-oss-20b",
+          "name": "GPT-OSS 20B",
+          "contextWindow": 128000,
+          "maxOutput": 8000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 2, "official": true }
+      },
+      "scheduler": {
+        "priority": 35,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Anonymous free tier: 2 RPM per IP per model. EU-hosted.",
+      "sources": ["https://endpoints.ai.cloud.ovh.net"]
+    },
+    {
+      "id": "siliconflow",
+      "name": "SiliconFlow",
+      "enabled": true,
+      "reason": null,
+      "ukStatus": "unknown",
+      "free": true,
+      "baseUrl": "https://api.siliconflow.cn/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "SILICONFLOW_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "Qwen/Qwen3-8B",
+          "name": "Qwen3 8B",
+          "contextWindow": 128000,
+          "capabilities": ["chat"],
+          "preferred": true
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 1000, "official": true },
+        "tpm": { "value": 50000, "official": true }
+      },
+      "scheduler": {
+        "priority": 50,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Identity verification required for free models.",
+      "sources": ["https://siliconflow.cn"]
+    },
+    {
+      "id": "google-gemini",
+      "name": "Google Gemini",
+      "enabled": false,
+      "reason": "Disabled by default: free-tier prompts may be used for training; UK/EEA terms require paid services for end-user clients. Enable explicitly if desired.",
+      "ukStatus": "restricted",
+      "free": true,
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+      "apiStyle": "gemini_native_or_openai_compat",
+      "authentication": {
+        "type": "query_or_header",
+        "envVar": "GOOGLE_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/openai/chat/completions",
+        "models": "/models",
+        "health": "/models",
+        "generateContent": "/models/{model}:generateContent"
+      },
+      "models": [
+        {
+          "id": "gemini-2.5-flash",
+          "name": "Gemini 2.5 Flash",
+          "contextWindow": 1000000,
+          "maxOutput": 65000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "gemini-2.5-flash-lite",
+          "name": "Gemini 2.5 Flash-Lite",
+          "contextWindow": 1000000,
+          "maxOutput": 65000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "rpm": { "value": 15, "official": false, "safetyMultiplier": 0.5 },
+        "rpd": { "value": 1500, "official": false, "safetyMultiplier": 0.5 },
+        "notes": "Google no longer publishes free-tier numbers; check AI Studio per project."
+      },
+      "scheduler": {
+        "priority": 95,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Strong free baseline but disabled pending explicit UK/privacy review.",
+      "sources": ["https://ai.google.dev"]
+    },
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "enabled": false,
+      "reason": "Disabled by default: free allowance is only ~$0.10/month of credits — too small for reliable chat.",
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://router.huggingface.co/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "HF_TOKEN",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+          "name": "Llama 3.1 8B Instruct",
+          "contextWindow": 128000,
+          "capabilities": ["chat"],
+          "preferred": true
+        }
+      ],
+      "limits": {
+        "monthlyCreditsUsd": { "value": 0.1, "official": true }
+      },
+      "scheduler": {
+        "priority": 20,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "Credit-metered via inference partners.",
+      "sources": ["https://huggingface.co/docs/inference-providers"]
+    },
+    {
+      "id": "ollama-cloud",
+      "name": "Ollama Cloud",
+      "enabled": false,
+      "reason": "Disabled by default: session/weekly limits unpublished; unreliable for production routing until limits are documented.",
+      "ukStatus": "available",
+      "free": true,
+      "baseUrl": "https://ollama.com/v1",
+      "apiStyle": "openai_chat",
+      "authentication": {
+        "type": "bearer",
+        "envVar": "OLLAMA_API_KEY",
+        "required": true
+      },
+      "routes": {
+        "chat": "/chat/completions",
+        "models": "/models",
+        "health": "/models"
+      },
+      "models": [
+        {
+          "id": "gpt-oss:20b",
+          "name": "GPT-OSS 20B",
+          "contextWindow": 131000,
+          "capabilities": ["chat"],
+          "preferred": true
+        },
+        {
+          "id": "llama3.3:70b",
+          "name": "Llama 3.3 70B",
+          "contextWindow": 128000,
+          "capabilities": ["chat"]
+        }
+      ],
+      "limits": {
+        "notes": "Session limits reset every 5 hours; weekly limits every 7 days. Exact numbers unpublished.",
+        "rpm": { "value": 10, "official": false, "safetyMultiplier": 0.5 }
+      },
+      "scheduler": {
+        "priority": 30,
+        "supportsStreaming": true,
+        "reserveDailyFraction": 0.05
+      },
+      "notes": "OpenAI-compatible at ollama.com/v1.",
+      "sources": ["https://ollama.com"]
+    }
+  ]
+}
