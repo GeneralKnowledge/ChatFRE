@@ -21,10 +21,13 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "FreeLLM Chat",
-  description: "Self-hostable ChatGPT-like app powered by free LLM APIs",
+  description:
+    "Self-hostable ChatGPT-like app powered by FreeLLMAPI free-tier routing",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"

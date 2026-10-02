@@ -22,7 +22,12 @@ type ChatPanelProps = {
   onNewChat: () => void;
 };
 
-type ProviderOption = { id: string; name: string; models: { id: string; name: string }[] };
+type RoutingStrategy = { id: string; name: string; description?: string };
+type ModelOption = {
+  id: string;
+  name: string;
+  executionStatus?: string;
+};
 
 export function ChatPanel({
   conversation,
@@ -40,7 +45,9 @@ export function ChatPanel({
   onNewChat,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
-  const [providers, setProviders] = useState<ProviderOption[]>([]);
+  const [strategies, setStrategies] = useState<RoutingStrategy[]>([]);
+  const [models, setModels] = useState<ModelOption[]>([]);
+  const [backendOk, setBackendOk] = useState<boolean | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [repos, setRepos] = useState<string[]>([]);
   const [exportRepo, setExportRepo] = useState("");
@@ -52,13 +59,25 @@ export function ChatPanel({
   useEffect(() => {
     void fetch("/api/providers")
       .then((r) => r.json())
-      .then((data: { config: ProviderOption[] }) => {
-        setProviders(
-          data.config
-            .filter((p) => (p as { enabled?: boolean }).enabled !== false)
-            .map((p) => ({ id: p.id, name: p.name, models: p.models })),
-        );
-      });
+      .then(
+        (data: {
+          routingStrategies?: RoutingStrategy[];
+          config?: Array<{
+            models: ModelOption[];
+          }>;
+          backend?: { ok?: boolean };
+        }) => {
+          setStrategies(data.routingStrategies ?? []);
+          const catalog = data.config?.[0]?.models ?? [];
+          setModels(
+            catalog.filter(
+              (m) => !m.executionStatus || m.executionStatus === "ready",
+            ),
+          );
+          setBackendOk(data.backend?.ok ?? null);
+        },
+      )
+      .catch(() => setBackendOk(false));
   }, []);
 
   useEffect(() => {
@@ -71,11 +90,6 @@ export function ChatPanel({
     el.style.height = "0px";
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   }, [input]);
-
-  const selectedModels =
-    provider === "auto"
-      ? []
-      : providers.find((p) => p.id === provider)?.models ?? [];
 
   const lastUserContent = [...messages]
     .reverse()
@@ -144,7 +158,7 @@ export function ChatPanel({
             {conversation?.title ?? "FreeLLM Chat"}
           </h1>
           <p className="text-sm text-[var(--ink-muted)]">
-            Auto-routed free providers · local persistence
+            Powered by FreeLLMAPI · local conversation history
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -169,9 +183,15 @@ export function ChatPanel({
                 FreeLLM
               </div>
               <p className="mt-3 max-w-md text-base text-[var(--ink-muted)]">
-                A personal ChatGPT-like client that routes across free LLM APIs
-                with intelligent failover and quota awareness.
+                A personal ChatGPT-like client on top of FreeLLMAPI — free-tier
+                routing, failover, and quota tracking stay in the gateway.
               </p>
+              {backendOk === false && (
+                <p className="mt-3 text-sm text-red-700">
+                  FreeLLMAPI is unreachable. Start it and set FREELLMAPI_API_KEY
+                  (see Settings).
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               {[
@@ -235,24 +255,31 @@ export function ChatPanel({
               value={provider}
               onChange={(e) => {
                 onProviderChange(e.target.value);
-                onModelChange("auto");
+                if (e.target.value !== "auto" && !e.target.value.startsWith("auto:")) {
+                  // leave model as-is
+                } else {
+                  onModelChange("auto");
+                }
               }}
               className="rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs"
+              title="FreeLLMAPI routing strategy (used when model is Auto)"
             >
-              <option value="auto">Provider: Auto</option>
-              {providers.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
+              {(strategies.length
+                ? strategies
+                : [{ id: "auto", name: "Auto (fallback chain)" }]
+              ).map((s) => (
+                <option key={s.id} value={s.id}>
+                  Route: {s.name}
                 </option>
               ))}
             </select>
             <select
               value={model}
               onChange={(e) => onModelChange(e.target.value)}
-              className="max-w-[240px] rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs"
+              className="max-w-[280px] rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs"
             >
               <option value="auto">Model: Auto</option>
-              {selectedModels.map((m) => (
+              {models.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
                 </option>
