@@ -1,69 +1,100 @@
-# FreeLLM Chat
+# ChatFRE
 
-Self-hostable ChatGPT-like web app. **ChatFRE** owns the UI, conversation history, and GitHub export. **[FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi)** owns free-tier LLM routing, failover, and rate-limit tracking behind one OpenAI-compatible `/v1` endpoint.
-
-## Architecture
+Thin self-host stack: **[FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi)** (LLM gateway) + **[Open WebUI](https://github.com/open-webui/open-webui)** (chat frontend).
 
 ```
-Web UI → Chat API → Conversation Service → FreeLLMAPI (/v1/chat/completions)
-                                      ↘ GitHub Service
+Browser → Open WebUI (:3000) → FreeLLMAPI (:3001/v1) → free-tier providers
+                 ↘ FreeLLMAPI dashboard (:3001) for keys & routing
 ```
 
-Provider keys never live in ChatFRE. Add them in the FreeLLMAPI dashboard; ChatFRE only stores the unified `freellmapi-…` key server-side.
+ChatFRE no longer ships a custom chat UI. Provider routing, failover, and quotas live in FreeLLMAPI; the ChatGPT-like interface is Open WebUI.
 
 ## Quick start
 
-### 1. Start FreeLLMAPI
+### 1. Configure
 
 ```bash
-# Generate a stable encryption key for FreeLLMAPI's key vault
-export ENCRYPTION_KEY="$(openssl rand -hex 32)"
+cp .env.example .env
+# Generate a stable encryption key for FreeLLMAPI's key vault:
+echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env
+# Or edit .env and set ENCRYPTION_KEY=... yourself
+```
+
+### 2. Start the stack
+
+```bash
 docker compose up -d
 ```
 
-Open [http://127.0.0.1:3001](http://127.0.0.1:3001), add provider keys on **Keys**, then copy the unified API key from the Keys page header.
+| Service | URL | Purpose |
+| --- | --- | --- |
+| Open WebUI | http://127.0.0.1:3000 | Chat |
+| FreeLLMAPI | http://127.0.0.1:3001 | Provider keys, fallback chain, unified API key |
 
-### 2. Start ChatFRE
+### 3. Wire FreeLLMAPI → Open WebUI
+
+1. Open **http://127.0.0.1:3001** → **Keys**
+2. Add at least one upstream provider key (Groq, OpenRouter, Gemini, …)
+3. Copy the unified `freellmapi-…` key from the Keys page header
+4. Put it in `.env`:
+
+   ```bash
+   FREELLMAPI_API_KEY=freellmapi-…
+   ```
+
+5. Recreate Open WebUI so it picks up the key:
+
+   ```bash
+   docker compose up -d open-webui
+   ```
+
+6. Open **http://127.0.0.1:3000** and chat. Models come from FreeLLMAPI (`auto`, `auto:fast`, concrete ids, …).
+
+**Alternative:** in Open WebUI admin → connections, add an OpenAI-compatible endpoint:
+
+- URL: `http://freellmapi:3001/v1` (from inside Docker) or `http://127.0.0.1:3001/v1` (if configuring from a browser-only flow that reaches the host)
+- Key: your unified FreeLLMAPI key
+
+## Common commands
 
 ```bash
-pnpm install
-cp .env.example .env.local
-# Set:
-#   FREELLMAPI_BASE_URL=http://127.0.0.1:3001/v1
-#   FREELLMAPI_API_KEY=freellmapi-…
-pnpm dev
+docker compose up -d          # start
+docker compose logs -f        # logs
+docker compose ps             # status
+docker compose down           # stop (keeps volumes)
+docker compose down -v        # stop and wipe data volumes
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+## Configuration
 
-## Stack
+| Variable | Required | Description |
+| --- | --- | --- |
+| `ENCRYPTION_KEY` | Yes | 64-char hex for FreeLLMAPI key encryption (`openssl rand -hex 32`) |
+| `FREELLMAPI_API_KEY` | For chat | Unified key from FreeLLMAPI Keys page |
+| `WEBUI_AUTH` | No | Default `false` (personal). Set `true` for login |
+| `WEBUI_SECRET_KEY` | If auth on | Session secret |
+| `OPEN_WEBUI_PORT` | No | Host port for Open WebUI (default `3000`) |
+| `FREELLMAPI_PORT` | No | Host port for FreeLLMAPI (default `3001`) |
+| `HOST_BIND` | No | Default `127.0.0.1`. Use `0.0.0.0` only on a trusted LAN |
 
-- Next.js (App Router) + React + TypeScript + Tailwind
-- SQLite via libSQL + Drizzle ORM (conversations only)
-- FreeLLMAPI as the LLM gateway
-- Zod validation, Vitest unit tests, Playwright ready
-- pnpm
+Keep `ENCRYPTION_KEY` and the FreeLLMAPI volume stable when upgrading, or encrypted provider keys cannot be decrypted.
 
-## Model selection
+## Model routing
 
-- **Route** (stored as `providerPreference`): FreeLLMAPI strategies such as `auto`, `auto:smart`, `auto:fast`, `auto:reliable`, `auto:balanced`
-- **Model**: `auto` (use the route strategy) or a concrete model id from `GET /v1/models`
-- Responses record FreeLLMAPI's `X-Routed-Via` header (which upstream provider served the turn)
+FreeLLMAPI accepts OpenAI-style `model` values:
 
-## Scripts
+- `auto` — your dashboard fallback chain
+- `auto:smart` / `auto:fast` / `auto:reliable` / `auto:balanced` — ranking strategies
+- Any concrete model id from `GET /v1/models`
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Local development |
-| `pnpm build` / `pnpm start` | Production build |
-| `pnpm test` | Unit tests |
-| `pnpm lint` | ESLint |
-| `docker compose up -d` | Start FreeLLMAPI |
+Open WebUI lists whatever FreeLLMAPI exposes.
 
-## GitHub export
+## Security notes
 
-Set `GITHUB_TOKEN` with `repo` scope. From a conversation, use **Export** to write Markdown under `chat-logs/`.
+- Ports bind to **localhost** by default. FreeLLMAPI is single-user; do not expose it to the internet.
+- Provider API keys stay inside FreeLLMAPI (encrypted at rest). Open WebUI only stores the unified gateway key.
+- For multi-user, set `WEBUI_AUTH=true` and a strong `WEBUI_SECRET_KEY`.
 
 ## License
 
-MIT
+MIT. Upstream projects keep their own licenses (FreeLLMAPI, Open WebUI).
