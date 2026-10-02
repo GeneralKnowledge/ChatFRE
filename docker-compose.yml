@@ -1,0 +1,39 @@
+# FreeLLMAPI backend for ChatFRE
+# Provider keys, routing, and rate limits live in FreeLLMAPI.
+# ChatFRE talks to it over the OpenAI-compatible /v1 API.
+#
+# 1. Copy this env fragment into a `.env` next to this compose file (or export vars).
+# 2. Generate ENCRYPTION_KEY once: openssl rand -hex 32
+# 3. docker compose up -d
+# 4. Open http://127.0.0.1:3001 → Keys page → create unified key
+# 5. Put that key in ChatFRE's .env.local as FREELLMAPI_API_KEY
+
+services:
+  freellmapi:
+    image: ghcr.io/tashfeenahmed/freellmapi:latest
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY to a 64-char hex string}
+    ports:
+      - "${HOST_BIND:-127.0.0.1}:${FREELLMAPI_PORT:-3001}:3001"
+    volumes:
+      - freellmapi-data:/app/server/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/ping').then((res) => { if (!res.ok) process.exit(1); }).catch(() => process.exit(1));",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  freellmapi-data:

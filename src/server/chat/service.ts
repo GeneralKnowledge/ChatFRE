@@ -6,8 +6,11 @@ import {
   getDefaultUserId,
 } from "@/server/database/client";
 import { conversations, messages } from "@/server/database/schema";
-import { getScheduler } from "@/server/llm/scheduler";
-import type { ChatMessage, ChatRequest } from "@/server/llm/types";
+import {
+  FreeLlmApiError,
+  streamFreeLlmChat,
+} from "@/server/llm/freellmapi/client";
+import type { ChatMessage } from "@/server/llm/types";
 import { createLogger } from "@/lib/logging/logger";
 import { getSetting, setSetting } from "@/server/chat/settings";
 
@@ -123,6 +126,7 @@ export type ChatStreamEvent =
       latencyMs: number;
       inputTokens?: number;
       outputTokens?: number;
+      routedVia?: string;
     }
   | { type: "error"; message: string };
 
@@ -226,40 +230,27 @@ export async function* sendChatStream(
     metadata: null,
   });
   yield { type: "assistant_start", id: assistantId };
-
-  const scheduler = getScheduler();
-  const freeOnly = (await getSetting("freeOnly")) !== "false";
-  const chatRequest: ChatRequest = {
-    messages: chatMessages,
-    model: modelPref === "auto" ? "auto" : modelPref,
-    stream: true,
+  yield {
+    type: "status",
+    message: "Routing through FreeLLMAPI…",
   };
 
   let full = "";
-  let provider = "unknown";
+  let provider = "freellmapi";
   let model = modelPref;
   let inputTokens: number | undefined;
   let outputTokens: number | undefined;
-  const pendingStatus: string[] = [];
+  let routedVia: string | undefined;
 
   try {
-    const streamIter = scheduler.streamWithFailover(chatRequest, {
-      priority: "interactive",
-      conversationId: conversation.id,
-      preferredProvider: providerPref,
-      preferredModel: modelPref,
-      freeOnly,
+    const streamIter = streamFreeLlmChat({
+      messages: chatMessages,
+      provider: providerPref,
+      model: modelPref,
       signal: input.signal,
-      onEvent: (event) => {
-        if (event.type === "failover") pendingStatus.push(event.reason);
-        if (event.type === "queued") pendingStatus.push(event.message);
-      },
     });
 
     while (true) {
-      while (pendingStatus.length) {
-        yield { type: "status", message: pendingStatus.shift()! };
-      }
       const next = await streamIter.next();
       if (next.done) {
         const result = next.value;
@@ -267,11 +258,9 @@ export async function* sendChatStream(
         model = result.model;
         inputTokens = result.inputTokens;
         outputTokens = result.outputTokens;
+        routedVia = result.routedVia;
         if (!full && result.content) full = result.content;
         break;
-      }
-      while (pendingStatus.length) {
-        yield { type: "status", message: pendingStatus.shift()! };
       }
       const chunk = next.value;
       if (chunk.type === "token" && chunk.content) {
@@ -293,7 +282,7 @@ export async function* sendChatStream(
         inputTokens: inputTokens ?? null,
         outputTokens: outputTokens ?? null,
         latencyMs,
-        metadata: JSON.stringify({ requestId }),
+        metadata: JSON.stringify({ requestId, routedVia }),
       })
       .where(eq(messages.id, assistantId));
 
@@ -307,6 +296,7 @@ export async function* sendChatStream(
       conversationId: conversation.id,
       provider,
       model,
+      routedVia,
       startTime: started,
       endTime: Date.now(),
       latency: latencyMs,
@@ -322,20 +312,34 @@ export async function* sendChatStream(
       latencyMs,
       inputTokens,
       outputTokens,
+      routedVia,
     };
   } catch (error) {
-    const message =
+    const aborted =
+      (error instanceof DOMException && error.name === "AbortError") ||
+      (error instanceof Error && error.name === "AbortError");
+
+    let message =
       error instanceof Error
         ? error.message
-        : "No available provider can currently handle this request.";
+        : "FreeLLMAPI could not handle this request.";
+
+    if (error instanceof FreeLlmApiError && error.status === 503) {
+      message =
+        "FreeLLMAPI is not configured. Set FREELLMAPI_API_KEY and start FreeLLMAPI (see README).";
+    } else if (
+      error instanceof Error &&
+      /ECONNREFUSED|fetch failed|Failed to fetch/i.test(error.message)
+    ) {
+      message =
+        "Cannot reach FreeLLMAPI. Is it running on the configured FREELLMAPI_BASE_URL?";
+    }
 
     await db
       .update(messages)
       .set({
         content: full,
-        status: error instanceof DOMException && error.name === "AbortError"
-          ? "cancelled"
-          : "failed",
+        status: aborted ? "cancelled" : "failed",
         error: message,
         latencyMs: Date.now() - started,
       })
