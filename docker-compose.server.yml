@@ -1,0 +1,16 @@
+# Personal-server overrides.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server up -d
+#
+# - Forces Open WebUI login
+# - Requires WEBUI_SECRET_KEY
+# - Disables open signup after you create your account (set ENABLE_SIGNUP=true for first boot)
+
+services:
+  open-webui:
+    environment:
+      WEBUI_AUTH: "true"
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?Set WEBUI_SECRET_KEY in .env (openssl rand -hex 32)}
+      ENABLE_SIGNUP: ${ENABLE_SIGNUP:-false}
+      # Helpful when served behind HTTPS reverse proxy
+      WEBUI_URL: ${WEBUI_URL:-https://${DOMAIN}}

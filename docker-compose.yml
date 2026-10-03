@@ -1,15 +1,11 @@
-# ChatFRE — FreeLLMAPI + Open WebUI
+# ChatFRE — FreeLLMAPI + Open WebUI (+ optional Caddy for personal servers)
 #
-# FreeLLMAPI: OpenAI-compatible gateway over free LLM tiers (routing, failover, quotas)
-# Open WebUI: chat frontend
+# Local / SSH-tunnel use:
+#   cp .env.example .env && ./scripts/up.sh
 #
-# Quick start:
-#   cp .env.example .env
-#   # set ENCRYPTION_KEY (openssl rand -hex 32)
-#   docker compose up -d
-#   open http://127.0.0.1:3001  → FreeLLMAPI Keys page → add provider keys → copy unified key
-#   put FREELLMAPI_API_KEY=... into .env and: docker compose up -d open-webui
-#   open http://127.0.0.1:3000  → Open WebUI
+# Personal server (HTTPS reverse proxy + Open WebUI login):
+#   cp .env.example .env   # fill DOMAIN, emails, secrets, FREELLMAPI_API_KEY
+#   docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server up -d
 
 services:
   freellmapi:
@@ -19,8 +15,8 @@ services:
       PORT: "3001"
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env (openssl rand -hex 32)}
     ports:
-      # Dashboard + API. Bound to localhost by default (single-user gateway).
-      - "${HOST_BIND:-127.0.0.1}:${FREELLMAPI_PORT:-3001}:3001"
+      # Always localhost — never expose FreeLLMAPI to the public internet.
+      - "127.0.0.1:${FREELLMAPI_PORT:-3001}:3001"
     volumes:
       - freellmapi-data:/app/server/data
     extra_hosts:
@@ -45,26 +41,46 @@ services:
       freellmapi:
         condition: service_healthy
     environment:
-      # Talk to FreeLLMAPI on the compose network (not localhost).
       ENABLE_OLLAMA_API: "false"
       ENABLE_OPENAI_API: "true"
       OPENAI_API_BASE_URL: http://freellmapi:3001/v1
       OPENAI_API_KEY: ${FREELLMAPI_API_KEY:-}
-      # Personal / single-user default. Set WEBUI_AUTH=true for login.
       WEBUI_AUTH: ${WEBUI_AUTH:-false}
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-}
+      ENABLE_SIGNUP: ${ENABLE_SIGNUP:-true}
       ENABLE_VERSION_UPDATE_CHECK: "false"
       SCARF_NO_ANALYTICS: "true"
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
     ports:
-      - "${HOST_BIND:-127.0.0.1}:${OPEN_WEBUI_PORT:-3000}:8080"
+      # Localhost-only direct access (SSH tunnel / on-box). Public traffic goes via Caddy.
+      - "127.0.0.1:${OPEN_WEBUI_PORT:-3000}:8080"
     volumes:
       - open-webui-data:/app/backend/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
+  caddy:
+    profiles: ["server"]
+    image: caddy:2
+    depends_on:
+      - open-webui
+    ports:
+      - "${CADDY_HTTP_BIND:-0.0.0.0}:80:80"
+      - "${CADDY_HTTPS_BIND:-0.0.0.0}:443:443"
+      - "${CADDY_HTTPS_BIND:-0.0.0.0}:443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env for server mode (e.g. chat.example.com)}
+      CADDY_EMAIL: ${CADDY_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
 volumes:
   freellmapi-data:
   open-webui-data:
+  caddy-data:
+  caddy-config:
