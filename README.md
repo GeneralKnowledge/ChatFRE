@@ -110,6 +110,28 @@ Do **not** set FreeLLMAPI to `0.0.0.0` or put it behind the public reverse proxy
 
 ---
 
+## Day-1 checklist (daily-driver test)
+
+1. Add **2–3 free provider keys** in FreeLLMAPI (suggested: Groq + OpenRouter + Gemini or Cloudflare). One key feels flaky; three makes `auto` useful.
+2. Set `FREELLMAPI_API_KEY` and recreate Open WebUI.
+3. Confirm new chats default to **`auto`** (`DEFAULT_MODELS=auto`).
+4. After creating your account, set **`ENABLE_SIGNUP=false`** (server mode).
+5. Take a backup once chats matter: `./scripts/backup.sh`
+
+---
+
+## Backup & update
+
+```bash
+./scripts/backup.sh          # writes backups/chatfre-*.tar.gz (gitignored)
+./scripts/update.sh          # pull images + recreate (auto-detects local vs server)
+./scripts/update.sh server   # force server compose files
+```
+
+Open WebUI is capped at **2g RAM** by default (`OPEN_WEBUI_MEMORY_LIMIT`) so a small VPS is less likely to OOM.
+
+---
+
 ## Common commands
 
 ```bash
@@ -130,6 +152,8 @@ docker compose -f docker-compose.yml -f docker-compose.server.yml --profile serv
 | --- | --- | --- |
 | `ENCRYPTION_KEY` | Yes | 64-char hex for FreeLLMAPI key encryption |
 | `FREELLMAPI_API_KEY` | For chat | Unified key from FreeLLMAPI Keys page |
+| `DEFAULT_MODELS` | No | New-chat model selection (default `auto`) |
+| `OPEN_WEBUI_MEMORY_LIMIT` | No | Open WebUI memory cap (default `2g`) |
 | `DOMAIN` | Server | Public hostname for Caddy / Let's Encrypt |
 | `CADDY_EMAIL` | Server (recommended) | ACME contact email |
 | `WEBUI_SECRET_KEY` | Server | Open WebUI session secret |

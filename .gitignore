@@ -8,6 +8,9 @@
 *.pem
 *.log
 
+# Volume backups from scripts/backup.sh
+/backups/
+
 # Leftover from previous Node app (if any)
 node_modules/
 .next/
