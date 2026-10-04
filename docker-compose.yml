@@ -1,22 +1,22 @@
-# FreeLLMAPI backend for ChatFRE
-# Provider keys, routing, and rate limits live in FreeLLMAPI.
-# ChatFRE talks to it over the OpenAI-compatible /v1 API.
+# ChatFRE — FreeLLMAPI + Open WebUI (+ optional Caddy for personal servers)
 #
-# 1. Copy this env fragment into a `.env` next to this compose file (or export vars).
-# 2. Generate ENCRYPTION_KEY once: openssl rand -hex 32
-# 3. docker compose up -d
-# 4. Open http://127.0.0.1:3001 → Keys page → create unified key
-# 5. Put that key in ChatFRE's .env.local as FREELLMAPI_API_KEY
+# Local / SSH-tunnel use:
+#   cp .env.example .env && ./scripts/up.sh
+#
+# Personal server (HTTPS reverse proxy + Open WebUI login):
+#   cp .env.example .env   # fill DOMAIN, emails, secrets, FREELLMAPI_API_KEY
+#   docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server up -d
 
 services:
   freellmapi:
     image: ghcr.io/tashfeenahmed/freellmapi:latest
     environment:
       NODE_ENV: production
-      PORT: 3001
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY to a 64-char hex string}
+      PORT: "3001"
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env (openssl rand -hex 32)}
     ports:
-      - "${HOST_BIND:-127.0.0.1}:${FREELLMAPI_PORT:-3001}:3001"
+      # Always localhost — never expose FreeLLMAPI to the public internet.
+      - "127.0.0.1:${FREELLMAPI_PORT:-3001}:3001"
     volumes:
       - freellmapi-data:/app/server/data
     extra_hosts:
@@ -28,12 +28,64 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3001/api/ping').then((res) => { if (!res.ok) process.exit(1); }).catch(() => process.exit(1));",
+          "fetch('http://127.0.0.1:3001/api/ping').then((r)=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s
-      start_period: 15s
+      start_period: 20s
       retries: 3
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    depends_on:
+      freellmapi:
+        condition: service_healthy
+    environment:
+      ENABLE_OLLAMA_API: "false"
+      ENABLE_OPENAI_API: "true"
+      OPENAI_API_BASE_URL: http://freellmapi:3001/v1
+      OPENAI_API_KEY: ${FREELLMAPI_API_KEY:-}
+      # New chats use FreeLLMAPI's router by default.
+      DEFAULT_MODELS: ${DEFAULT_MODELS:-auto}
+      WEBUI_AUTH: ${WEBUI_AUTH:-false}
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-}
+      ENABLE_SIGNUP: ${ENABLE_SIGNUP:-true}
+      ENABLE_VERSION_UPDATE_CHECK: "false"
+      SCARF_NO_ANALYTICS: "true"
+      DO_NOT_TRACK: "true"
+      ANONYMIZED_TELEMETRY: "false"
+    ports:
+      # Localhost-only direct access (SSH tunnel / on-box). Public traffic goes via Caddy.
+      - "127.0.0.1:${OPEN_WEBUI_PORT:-3000}:8080"
+    volumes:
+      - open-webui-data:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Caps Open WebUI on small VPSes (Compose maps this to the container memory limit).
+    mem_limit: ${OPEN_WEBUI_MEMORY_LIMIT:-2g}
+    restart: unless-stopped
+
+  caddy:
+    profiles: ["server"]
+    image: caddy:2
+    depends_on:
+      - open-webui
+    ports:
+      - "${CADDY_HTTP_BIND:-0.0.0.0}:80:80"
+      - "${CADDY_HTTPS_BIND:-0.0.0.0}:443:443"
+      - "${CADDY_HTTPS_BIND:-0.0.0.0}:443:443/udp"
+    environment:
+      # Required at runtime for --profile server (validated by scripts/up-server.sh).
+      DOMAIN: ${DOMAIN:-localhost}
+      CADDY_EMAIL: ${CADDY_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
 
 volumes:
   freellmapi-data:
+  open-webui-data:
+  caddy-data:
+  caddy-config:
