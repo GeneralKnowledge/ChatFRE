@@ -1,10 +1,9 @@
 # ChatFRE
 
-Thin self-host stack: **[FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi)** (LLM gateway) + **[Open WebUI](https://github.com/open-webui/open-webui)** (chat frontend), with an optional **Caddy** HTTPS front door for personal servers.
+Thin self-host stack: **[FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi)** (LLM gateway) + **[Open WebUI](https://github.com/open-webui/open-webui)** (chat UI).
 
 ```
-Browser → Open WebUI → FreeLLMAPI (/v1) → free-tier providers
-              ↗ optional Caddy (:443)
+Browser → Cloudflare → Open WebUI (:8080) → FreeLLMAPI (/v1) → free providers
 FreeLLMAPI dashboard stays on localhost (SSH tunnel)
 ```
 
@@ -12,166 +11,109 @@ FreeLLMAPI dashboard stays on localhost (SSH tunnel)
 
 | Mode | Command | Access |
 | --- | --- | --- |
+| **Cloudflare (personal)** | `./scripts/up-cloudflare.sh` | Origin `:8080`, no login |
 | Local / SSH tunnel | `./scripts/up.sh` | `127.0.0.1:3000` + `:3001` |
-| Personal server | `./scripts/up-server.sh` | `https://your.domain` (Caddy) + FreeLLMAPI via SSH |
+| Caddy + login | `./scripts/up-server.sh` | `https://$DOMAIN` |
 
 ---
 
-## Local / SSH-tunnel quick start
+## Personal server with Cloudflare (no signup)
+
+No accounts. Open WebUI listens on **port 8080** for Cloudflare (tunnel or proxied origin). FreeLLMAPI stays private on localhost.
+
+### 1. Requirements
+
+- Docker + Compose on the server
+- Cloudflare in front (Tunnel recommended, or DNS proxy to `:8080`)
+- Outbound HTTPS for LLM providers
+
+### 2. Clone and configure
 
 ```bash
-cp .env.example .env
-./scripts/up.sh
-```
-
-| Service | URL |
-| --- | --- |
-| Open WebUI | http://127.0.0.1:3000 |
-| FreeLLMAPI | http://127.0.0.1:3001 |
-
-Wire the gateway key:
-
-1. Open FreeLLMAPI → **Keys** → add provider keys → copy unified `freellmapi-…` key  
-2. Set `FREELLMAPI_API_KEY` in `.env`  
-3. `docker compose up -d open-webui`
-
-From your laptop to a remote host that only binds localhost:
-
-```bash
-ssh -L 3000:127.0.0.1:3000 -L 3001:127.0.0.1:3001 user@your-server
-```
-
----
-
-## Personal server (recommended for a VPS)
-
-Exposes **only Open WebUI** on ports 80/443 with Let's Encrypt. FreeLLMAPI remains on `127.0.0.1` so provider keys are not on the public internet.
-
-### Requirements
-
-- Docker + Docker Compose plugin
-- A DNS **A/AAAA** record for your domain pointing at the server
-- Inbound **80/443** open (for ACME + HTTPS)
-- Outbound HTTPS (providers + Let's Encrypt)
-
-### Setup
-
-```bash
+git clone -b cursor/open-webui-compose-135a https://github.com/GeneralKnowledge/ChatFRE.git
+cd ChatFRE
 cp .env.example .env
 ```
 
-Edit `.env`:
+`.env` defaults for this mode (also set by the script):
 
 ```bash
-ENCRYPTION_KEY=          # openssl rand -hex 32  (or let the script generate it)
-DOMAIN=chat.example.com
-CADDY_EMAIL=you@example.com
-WEBUI_SECRET_KEY=        # openssl rand -hex 32  (or let the script generate it)
-ENABLE_SIGNUP=true       # first boot only
-FREELLMAPI_API_KEY=      # add after FreeLLMAPI setup
+WEBUI_AUTH=false
+ENABLE_SIGNUP=false
+OPEN_WEBUI_PORT=8080
+OPEN_WEBUI_BIND=0.0.0.0
+# FREELLMAPI_API_KEY=   # fill in step 5
 ```
+
+If you use **Cloudflare Tunnel** only (cloudflared on the same box), prefer:
 
 ```bash
-./scripts/up-server.sh
+OPEN_WEBUI_BIND=127.0.0.1
 ```
 
-Equivalent compose invocation:
+### 3. Start
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server up -d
+./scripts/up-cloudflare.sh
 ```
 
-### First login
+### 4. Point Cloudflare at port 8080
 
-1. Open `https://your.domain` and create the admin account (`ENABLE_SIGNUP=true`)
-2. Set `ENABLE_SIGNUP=false` in `.env` and re-run `./scripts/up-server.sh`
-3. Configure FreeLLMAPI over SSH (not public):
+**Tunnel (preferred):** create a tunnel whose service URL is `http://127.0.0.1:8080` (with `OPEN_WEBUI_BIND=127.0.0.1`).
 
-   ```bash
-   ssh -L 3001:127.0.0.1:3001 user@your-server
-   # http://127.0.0.1:3001 → Keys → providers + unified key
-   ```
+**Proxied DNS:** orange-cloud the hostname to your server and set the origin port to **8080** (or a Cloudflare Load Balancer / origin rule to `:8080`).
 
-4. Put `FREELLMAPI_API_KEY=freellmapi-…` in `.env` and recreate Open WebUI:
+Optional but recommended when auth is off: put **Cloudflare Access** in front of the hostname so only you can open it.
 
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server up -d open-webui
-   ```
+### 5. Add provider keys (private)
 
-### What is public vs private
+```bash
+ssh -L 3001:127.0.0.1:3001 user@your-server
+# browser: http://127.0.0.1:3001 → Keys
+```
 
-| Surface | Public? |
-| --- | --- |
-| Open WebUI via Caddy `:443` | Yes (login required) |
-| Open WebUI host port `:3000` | Localhost only |
-| FreeLLMAPI `:3001` | Localhost only — use SSH tunnel |
+Add 2–3 free keys (Groq + OpenRouter + Gemini/Cloudflare AI), copy the unified `freellmapi-…` key into `.env`:
 
-Do **not** set FreeLLMAPI to `0.0.0.0` or put it behind the public reverse proxy without additional auth. It is a single-user key vault.
+```bash
+FREELLMAPI_API_KEY=freellmapi-…
+docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d open-webui
+```
+
+### 6. Chat
+
+Open your Cloudflare hostname. Model **`auto`**. No signup screen.
 
 ---
 
-## Day-1 checklist (daily-driver test)
+## Security note
 
-1. Add **2–3 free provider keys** in FreeLLMAPI (suggested: Groq + OpenRouter + Gemini or Cloudflare). One key feels flaky; three makes `auto` useful.
-2. Set `FREELLMAPI_API_KEY` and recreate Open WebUI.
-3. Confirm new chats default to **`auto`** (`DEFAULT_MODELS=auto`).
-4. After creating your account, set **`ENABLE_SIGNUP=false`** (server mode).
-5. Take a backup once chats matter: `./scripts/backup.sh`
+With `WEBUI_AUTH=false`, anyone who can reach Open WebUI can use your free-tier quota. Prefer Cloudflare Tunnel and/or Access. Never publish FreeLLMAPI (`:3001`).
 
 ---
 
 ## Backup & update
 
 ```bash
-./scripts/backup.sh          # writes backups/chatfre-*.tar.gz (gitignored)
-./scripts/update.sh          # pull images + recreate (auto-detects local vs server)
-./scripts/update.sh server   # force server compose files
+./scripts/backup.sh
+./scripts/update.sh              # auto-detects mode
+./scripts/update.sh cloudflare   # force Cloudflare compose files
 ```
-
-Open WebUI is capped at **2g RAM** by default (`OPEN_WEBUI_MEMORY_LIMIT`) so a small VPS is less likely to OOM.
 
 ---
 
-## Common commands
-
-```bash
-# Local
-docker compose up -d
-docker compose logs -f
-docker compose down
-
-# Server
-docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server up -d
-docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server logs -f caddy open-webui
-docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server down
-```
-
 ## Configuration reference
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `ENCRYPTION_KEY` | Yes | 64-char hex for FreeLLMAPI key encryption |
-| `FREELLMAPI_API_KEY` | For chat | Unified key from FreeLLMAPI Keys page |
-| `DEFAULT_MODELS` | No | New-chat model selection (default `auto`) |
-| `OPEN_WEBUI_MEMORY_LIMIT` | No | Open WebUI memory cap (default `2g`) |
-| `DOMAIN` | Server | Public hostname for Caddy / Let's Encrypt |
-| `CADDY_EMAIL` | Server (recommended) | ACME contact email |
-| `WEBUI_SECRET_KEY` | Server | Open WebUI session secret |
-| `WEBUI_AUTH` | No | Default `false` locally; forced `true` in server override |
-| `ENABLE_SIGNUP` | Server | `true` for first account, then `false` |
-| `OPEN_WEBUI_PORT` | No | Localhost port for Open WebUI (default `3000`) |
-| `FREELLMAPI_PORT` | No | Localhost port for FreeLLMAPI (default `3001`) |
-
-Keep `ENCRYPTION_KEY` and the FreeLLMAPI volume stable when upgrading, or encrypted provider keys cannot be decrypted.
-
-## Model routing
-
-FreeLLMAPI accepts OpenAI-style `model` values:
-
-- `auto` — dashboard fallback chain
-- `auto:smart` / `auto:fast` / `auto:reliable` / `auto:balanced`
-- Concrete model ids from `GET /v1/models`
+| Variable | Description |
+| --- | --- |
+| `ENCRYPTION_KEY` | FreeLLMAPI key vault (required; `openssl rand -hex 32`) |
+| `FREELLMAPI_API_KEY` | Unified gateway key |
+| `OPEN_WEBUI_PORT` | Host port (Cloudflare mode: `8080`) |
+| `OPEN_WEBUI_BIND` | `0.0.0.0` for public origin, `127.0.0.1` for tunnel-only |
+| `WEBUI_AUTH` | `false` = no login |
+| `ENABLE_SIGNUP` | Ignored when auth is off; keep `false` |
+| `DEFAULT_MODELS` | Default `auto` |
+| `OPEN_WEBUI_MEMORY_LIMIT` | Default `2g` |
 
 ## License
 
-MIT. Upstream projects keep their own licenses (FreeLLMAPI, Open WebUI, Caddy).
+MIT. Upstream projects keep their own licenses.

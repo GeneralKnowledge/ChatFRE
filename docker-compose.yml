@@ -1,10 +1,12 @@
-# ChatFRE — FreeLLMAPI + Open WebUI (+ optional Caddy for personal servers)
+# ChatFRE — FreeLLMAPI + Open WebUI
 #
-# Local / SSH-tunnel use:
+# Local / SSH-tunnel:
 #   cp .env.example .env && ./scripts/up.sh
 #
-# Personal server (HTTPS reverse proxy + Open WebUI login):
-#   cp .env.example .env   # fill DOMAIN, emails, secrets, FREELLMAPI_API_KEY
+# Cloudflare on :8080 (no signup/login):
+#   cp .env.example .env && ./scripts/up-cloudflare.sh
+#
+# Optional Caddy HTTPS + login (alternate):
 #   docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server up -d
 
 services:
@@ -45,23 +47,21 @@ services:
       ENABLE_OPENAI_API: "true"
       OPENAI_API_BASE_URL: http://freellmapi:3001/v1
       OPENAI_API_KEY: ${FREELLMAPI_API_KEY:-}
-      # New chats use FreeLLMAPI's router by default.
       DEFAULT_MODELS: ${DEFAULT_MODELS:-auto}
       WEBUI_AUTH: ${WEBUI_AUTH:-false}
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-}
-      ENABLE_SIGNUP: ${ENABLE_SIGNUP:-true}
+      ENABLE_SIGNUP: ${ENABLE_SIGNUP:-false}
       ENABLE_VERSION_UPDATE_CHECK: "false"
       SCARF_NO_ANALYTICS: "true"
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
     ports:
-      # Localhost-only direct access (SSH tunnel / on-box). Public traffic goes via Caddy.
-      - "127.0.0.1:${OPEN_WEBUI_PORT:-3000}:8080"
+      # Bind/port controlled by env (Cloudflare mode uses 0.0.0.0:8080).
+      - "${OPEN_WEBUI_BIND:-127.0.0.1}:${OPEN_WEBUI_PORT:-3000}:8080"
     volumes:
       - open-webui-data:/app/backend/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    # Caps Open WebUI on small VPSes (Compose maps this to the container memory limit).
     mem_limit: ${OPEN_WEBUI_MEMORY_LIMIT:-2g}
     restart: unless-stopped
 
@@ -75,7 +75,6 @@ services:
       - "${CADDY_HTTPS_BIND:-0.0.0.0}:443:443"
       - "${CADDY_HTTPS_BIND:-0.0.0.0}:443:443/udp"
     environment:
-      # Required at runtime for --profile server (validated by scripts/up-server.sh).
       DOMAIN: ${DOMAIN:-localhost}
       CADDY_EMAIL: ${CADDY_EMAIL:-}
     volumes:

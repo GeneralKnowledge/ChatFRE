@@ -1,0 +1,14 @@
+# Cloudflare personal mode — no signup/login, Open WebUI on :8080.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d
+#
+# Point Cloudflare (tunnel or proxied origin) at this host's port 8080.
+# FreeLLMAPI stays on 127.0.0.1:3001 (SSH tunnel for keys).
+
+services:
+  open-webui:
+    environment:
+      WEBUI_AUTH: "false"
+      ENABLE_SIGNUP: "false"
+    ports: !override
+      - "${OPEN_WEBUI_BIND:-0.0.0.0}:${OPEN_WEBUI_PORT:-8080}:8080"
