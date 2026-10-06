@@ -5,23 +5,37 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-MODE="${1:-auto}" # auto | local | server
+MODE="${1:-auto}" # auto | local | cloudflare | server
 
-compose_cmd() {
-  if [[ "$MODE" == "server" ]] || {
-    [[ "$MODE" == "auto" ]] && docker compose ps --services 2>/dev/null | grep -qx caddy
-  }; then
-    docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server "$@"
+detect_mode() {
+  local services
+  services="$(docker compose ps --services 2>/dev/null || true)"
+  if echo "$services" | grep -qx caddy; then
+    echo server
+  elif [[ -f .env ]] && grep -qE '^OPEN_WEBUI_PORT=8080$' .env && grep -qE '^WEBUI_AUTH=false$' .env; then
+    echo cloudflare
   else
-    docker compose "$@"
+    echo local
   fi
 }
 
-if [[ "$MODE" == "auto" ]] && compose_cmd ps --services 2>/dev/null | grep -qx caddy; then
-  echo "Detected server profile (caddy running)."
-  MODE=server
-elif [[ "$MODE" == "auto" ]]; then
-  MODE=local
+compose_cmd() {
+  case "$MODE" in
+    server)
+      docker compose -f docker-compose.yml -f docker-compose.server.yml --profile server "$@"
+      ;;
+    cloudflare)
+      docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml "$@"
+      ;;
+    *)
+      docker compose "$@"
+      ;;
+  esac
+}
+
+if [[ "$MODE" == "auto" ]]; then
+  MODE="$(detect_mode)"
+  echo "Detected mode: ${MODE}"
 fi
 
 echo "Updating ChatFRE (${MODE})…"
